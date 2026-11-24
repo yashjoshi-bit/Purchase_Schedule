@@ -5,6 +5,18 @@
 
 frappe.provide("purchase_schedule.po_schedule");
 
+// Compact "Add Schedule" button in the Purchase Order items grid.
+frappe.dom.set_style(
+	`[data-fieldname="items"] [data-fieldname="add_schedule"] .btn {
+		font-size: 11px;
+		line-height: 1.2;
+		padding: 2px 6px;
+		height: auto;
+		min-height: 0;
+	}`,
+	"purchase-schedule-add-schedule-btn"
+);
+
 purchase_schedule.po_schedule = {
 	doctype: "Purchase Receipt Schedule",
 	api: "purchase_schedule.purchase_schedule_app.purchase_order_schedule",
@@ -199,6 +211,49 @@ purchase_schedule.po_schedule = {
 			},
 		});
 	},
+
+	// Keep the "Add Schedule" column in the items grid even when the user's column
+	// settings (grid ⚙) leave it out. Patches this grid instance once; returns true
+	// the first time, so the caller rebuilds the already-rendered columns.
+	pin_column(grid) {
+		if (grid.__add_schedule_pinned) return false;
+		grid.__add_schedule_pinned = true;
+
+		const setup_user_defined_columns = grid.setup_user_defined_columns;
+		grid.setup_user_defined_columns = function () {
+			setup_user_defined_columns.call(this);
+
+			// no user settings: the grid falls back to in_list_view, which includes it
+			const columns = this.user_defined_columns || [];
+			if (!columns.length || columns.some((d) => d.fieldname === "add_schedule")) {
+				return;
+			}
+
+			const df = this.docfields.find((d) => d.fieldname === "add_schedule");
+			if (df) {
+				df.in_list_view = 1;
+				columns.push(df);
+			}
+		};
+
+		return true;
+	},
+
+	// Opens the schedule dialog for one item row, loaded with its saved schedule.
+	open_for_row(frm, row) {
+		if (frm.doc.docstatus === 2) {
+			frappe.throw(__("Cannot add a purchase receipt schedule to a cancelled Purchase Order."));
+		}
+		if (frm.is_new() || row.__islocal || frm.is_dirty()) {
+			frappe.throw(__("Please save the Purchase Order before adding a purchase receipt schedule."));
+		}
+
+		frappe.call({
+			method: `${this.api}.get_purchase_schedule`,
+			args: { purchase_order: frm.doc.name, purchase_order_item: row.name },
+			callback: (r) => this.open_dialog(frm, row, r.message || []),
+		});
+	},
 };
 
 frappe.ui.form.on("Purchase Order", {
@@ -210,31 +265,27 @@ frappe.ui.form.on("Purchase Order", {
 	},
 
 	refresh(frm) {
-		frm.fields_dict.items.grid.update_docfield_property(
-			"add_schedule",
-			"hidden",
-			frm.is_new() || frm.doc.docstatus === 2
-		);
+		const grid = frm.fields_dict.items.grid;
+		const hidden = frm.is_new() || frm.doc.docstatus === 2 ? 1 : 0;
+		const df = grid.docfields.find((d) => d.fieldname === "add_schedule");
+		let needs_reset = purchase_schedule.po_schedule.pin_column(grid);
+
+		if (df && cint(df.hidden) !== hidden) {
+			df.hidden = hidden; // update_docfield_property skips this before rows render
+			grid.update_docfield_property("add_schedule", "hidden", hidden);
+			needs_reset = true;
+		}
+
+		// The grid caches its visible columns; rebuild them so the button column
+		// appears right after the first save (and disappears on cancel).
+		if (needs_reset) {
+			grid.reset_grid();
+		}
 	},
 });
 
 frappe.ui.form.on("Purchase Order Item", {
 	add_schedule(frm, cdt, cdn) {
-		const row = locals[cdt][cdn];
-
-		if (frm.doc.docstatus === 2) {
-			frappe.throw(__("Cannot add a purchase receipt schedule to a cancelled Purchase Order."));
-		}
-		if (row.__islocal || frm.is_dirty()) {
-			frappe.throw(__("Please save the Purchase Order before adding a purchase receipt schedule."));
-		}
-
-		frappe.call({
-			method: `${purchase_schedule.po_schedule.api}.get_purchase_schedule`,
-			args: { purchase_order: frm.doc.name, purchase_order_item: row.name },
-			callback: (r) => {
-				purchase_schedule.po_schedule.open_dialog(frm, row, r.message || []);
-			},
-		});
+		purchase_schedule.po_schedule.open_for_row(frm, locals[cdt][cdn]);
 	},
 });
