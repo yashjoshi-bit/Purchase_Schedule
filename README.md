@@ -1,6 +1,13 @@
 ### Purchase Schedule app
 
-Purhase Receipt Schedule
+Purchase Receipt Schedule for ERPNext Purchase Orders.
+
+> **App name:** `purchase_schedule`
+> **Repository:** `Purchase-Order-Schedule`
+>
+> The GitHub repository name is different from the app name. Always use the app
+> name `purchase_schedule` in bench commands, and the app folder is
+> `apps/purchase_schedule`.
 
 ### Installation
 
@@ -12,12 +19,20 @@ You can install this app using the [bench](https://github.com/frappe/bench) CLI:
 # 1. go to your bench folder
 cd ~/frappe-bench-v16
 
-# 2. download the app into the bench
-bench get-app https://github.com/yashjoshi-bit/Purchase-Order-Schedule.git --branch main
+# 2. download the app into the bench (pass the app name before the URL)
+bench get-app purchase_schedule https://github.com/yashjoshi-bit/Purchase-Order-Schedule.git --branch main
+
+# 3. install it on your site
 bench --site your-site-name install-app purchase_schedule
 bench --site your-site-name migrate
-
 ```
+
+> **Important:** run `bench get-app` only once per bench. If `apps/purchase_schedule`
+> already exists, do not run `get-app` again; use the **Updating** steps below.
+> Running `get-app` again (especially without the `purchase_schedule` name) clones a
+> duplicate `apps/Purchase-Order-Schedule` folder and fails with
+> `OSError: [Errno 39] Directory not empty`. If that happens, delete the duplicate:
+> `rm -rf apps/Purchase-Order-Schedule`.
 
 Replace `your-site-name` with your site, e.g. `erpnext-v16.local`.
 
@@ -25,7 +40,7 @@ Replace `your-site-name` with your site, e.g. `erpnext-v16.local`.
 
 ```bash
 cd ~/frappe-bench-v16
-bench update --apps purchase_schedule   # or: cd apps/purchase_schedule && git pull
+bench update --pull --apps purchase_schedule   # or: cd apps/purchase_schedule && git pull
 bench --site your-site-name migrate
 bench --site your-site-name clear-cache
 ```

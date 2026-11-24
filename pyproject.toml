@@ -3,7 +3,7 @@ name = "purchase_schedule"
 authors = [
     { name = "yash joshi", email = "yash.joshi@aurigait.com"}
 ]
-description = "Purhase Receipt Schedule"
+description = "Purchase Receipt Schedule"
 requires-python = ">=3.14"
 readme = "README.md"
 dynamic = ["version"]

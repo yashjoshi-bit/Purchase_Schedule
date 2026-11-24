@@ -1,7 +1,7 @@
 app_name = "purchase_schedule"
 app_title = "Purchase Schedule app"
 app_publisher = "yash joshi"
-app_description = "Purhase Receipt Schedule"
+app_description = "Purchase Receipt Schedule"
 app_email = "yash.joshi@aurigait.com"
 app_license = "mit"
 
